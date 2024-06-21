@@ -7,8 +7,7 @@ const flash = require('express-flash');
 const session = require('express-session');
 //Router Require
 var intro = require('./routes/introRouter');
-var freelancersRouter = require('./routes/freelancersRouter');
-var clientsRouter = require('./routes/clientsRouter');
+var homePageRouter = require('./routes/homePageRouter');
 const passport = require('passport');
 
 var app = express();
@@ -33,8 +32,8 @@ app.use(cookieParser());
 app.use(express.static(path.join(__dirname, 'public')));
 //Router Use
 app.use('/', intro.router);
-app.use('/freelancers', freelancersRouter);
-app.use('/clients', clientsRouter);
+app.use('/in', homePageRouter);
+
 
 
 

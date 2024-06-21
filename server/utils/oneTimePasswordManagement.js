@@ -58,21 +58,21 @@ async function sendOTPthroughEmail(email, otp) {
     let mailOptions = {
         from: process.env.EMAIL_FROM,
         to: email,
-        subject: 'Your OTP for verification in EthLance ',
+        subject: 'Your OTP for verification for Learn Link ',
         text: `Hi there,
 
-        Thank you for using EthLance! To ensure your safety, please enter the following One-Time Password (OTP) in the designated field on our website:
+        Thank you for using Learn Link! To ensure your safety, please enter the following One-Time Password (OTP) in the designated field on our website:
         
         ${otp}
         
         This OTP is valid for 2 minutes. Please do not share it with anyone else.
         
         If you did not initiate this request, please disregard this email.
-        Welcome to EthLance!
+        Welcome to Learn Link!
         
         Sincerely,
         
-        The EthLance Team`
+        The Learn Link Team`
     };
 
     try {
