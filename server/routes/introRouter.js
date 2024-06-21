@@ -3,15 +3,16 @@ var router = express.Router();
 const bcrypt = require('bcrypt');
 const passport = require('passport');
 const initialisePassport = require('../utils/passportConfig');
-const pool = require('../database/connection');
+const db = require('../database/connection');
 
 //initialising passport, 2nd param is a function to get user by email
 initialisePassport(passport, async (email) => {
     let conn;
     try {
-        conn = await pool.getConnection();
-        const rows = await conn.query("SELECT * FROM USERS WHERE email=?", [email]);
-        return rows[0];
+        conn = await db.connect();
+        const collection = conn.collection('students');
+        const user = await collection.findOne({ email: email }, { projection: { _id: 1, password: 1 } });
+        return user;
 
     }
     catch (err) {
@@ -19,48 +20,50 @@ initialisePassport(passport, async (email) => {
     }
     finally {
         if (conn)
-            conn.release();
+            db.disconnect();
     }
 });
 
-//Middlewares
-function ensureAuthenticatedandFreelancer(req, res, next)   //Authentication check for routes that should be accessed only after login as Freelancers
+//MIDDLEWARES
+
+function checkAuthenticated(req,res,next)
+
 {
     if (!req.isAuthenticated())
-        return res.redirect('/signup&in');
-    if (req.user.type !== 'freelancer')
-        return res.status(403).send('Unauthorized: Only freelancers can access this route');
-    next();
+    {
+        res.redirect('/signup&in');
+    }
+    else
+    {
+        next();
+    }
+    
 }
-function ensureAuthenticatedAndClient(req, res, next)   //Authentication check for routes that should be accessed only after login as Clients
-{
-    if (!req.isAuthenticated())
-        return res.redirect('/signup&in');
-    if (req.user.type !== 'client')
-        return res.status(403).send('Unauthorized: Only clients can access this route');
-    next();
-}
+
+//TO IMPLEMENT CHECK AUTHENTICATED FOR STUDENTS THAT ARE ALSO TEACHERS
 
 function checkNotAuthenticated(req, res, next)    //Authentication check for routes that should not be accessed after login
 {
     if (req.isAuthenticated()) {
-        req.user.type == 'freelancer' ? res.redirect('/freelancers') : res.redirect('/clients');
+        res.redirect('/in');
     }
     else {
         next();
     }
 }
+
+
 // GET FUNCTIONS
 
-router.get('/', checkNotAuthenticated, (req, res) => {
+router.get('/',checkNotAuthenticated, (req, res) => {
     res.send("Intro page goes here");
 })
 
-router.get('/signup&in', checkNotAuthenticated, (req, res) => {
+router.get('/signup&in',checkNotAuthenticated, (req, res) => {
     res.send('signup & signin page goes here');
 })
 
-router.get('/forgotpassword', checkNotAuthenticated, (req, res) => {
+router.get('/forgotpassword',checkNotAuthenticated, (req, res) => {
     res.send("forgot password page goes here");
 })
 
@@ -70,14 +73,15 @@ router.post('/signup', checkNotAuthenticated, async (req, res) => {
     let conn;
     try {
         const hashedpassword = await bcrypt.hash(req.body.password, 10);
-        conn = await pool.getConnection();
-        const query = "INSERT INTO USERS (type,email,password) VALUES (?,?,?)";
-        await conn.query(query, [req.body.type, req.body.email, hashedpassword]);
+        conn = await db.connect();
+        const student = {email: req.body.email, password: hashedpassword };
+        const collection = conn.collection('students');
+        await collection.insertOne(student);
         req.flash('success', 'Sign Up successful, please Sign in to continue.');
         res.redirect('/signup&in'); // Redirect to signin page
     }
     catch (err) {
-        if (err.code === 'ER_DUP_ENTRY') {
+        if (err.code === 11000) { // MongoDB duplicate key error code
             req.flash('error', 'Email already exists');
             res.redirect('/signup&in'); // Redirect to signup page
         } else {
@@ -88,7 +92,7 @@ router.post('/signup', checkNotAuthenticated, async (req, res) => {
     }
     finally {
         if (conn)
-            conn.release()
+            await db.disconnect();
     }
 });
 router.post('/signin',async function (req, res, next) {
@@ -122,11 +126,7 @@ router.post('/signin',async function (req, res, next) {
             if (err) {
                 return next(err);
             }
-            if (user.type === 'freelancer') {
-                return res.redirect('/freelancers');
-            } else {
-                return res.redirect('/clients');
-            }
+            return res.redirect('/in');
         });
     })(req, res, next);
 });
@@ -144,6 +144,6 @@ router.delete('/signout', (req, res) => {
 
 module.exports = {
     router: router,
-    ensureAuthenticatedAndFreelancer: ensureAuthenticatedandFreelancer,
-    ensureAuthenticatedAndClient: ensureAuthenticatedAndClient
+    checkAuthenticated: checkAuthenticated,
+    checkNotAuthenticated: checkNotAuthenticated
 };
