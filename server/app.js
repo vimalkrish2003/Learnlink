@@ -12,6 +12,9 @@ const passport = require('passport');
 
 var app = express();
 
+// Set port to 4000
+const port = process.env.PORT || 4000;
+
 // view engine setup
 app.set('views', path.join(__dirname, 'views'));
 app.set('view engine', 'hbs');
@@ -25,7 +28,7 @@ app.use(session
     secret: 'razaaaaaaalda',
     resave: false,
     saveUninitialized: false
-  }))
+  }));
 app.use(passport.initialize());
 app.use(passport.session());
 app.use(cookieParser());
@@ -33,9 +36,6 @@ app.use(express.static(path.join(__dirname, 'public')));
 //Router Use
 app.use('/', intro.router);
 app.use('/in', homePageRouter);
-
-
-
 
 // catch 404 and forward to error handler
 app.use(function (req, res, next) {
@@ -51,6 +51,10 @@ app.use(function (err, req, res, next) {
   // render the error page
   res.status(err.status || 500);
   res.render('error');
+});
+
+app.listen(port, () => {
+  console.log(`Server is running on http://localhost:${port}`);
 });
 
 module.exports = app;
