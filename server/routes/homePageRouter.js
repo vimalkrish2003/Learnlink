@@ -50,4 +50,28 @@ router.post('/add-student',checkAuthenticated,  [
     }
 });
 
+
+// router to check if username exists
+router.post('/check-username', checkAuthenticated, async (req, res) => {
+    const { username } = req.body;
+    let conn;
+    try {
+        conn = await db.connect();
+        const collection = conn.collection('students');
+        const user = await collection.findOne({ username });
+        if (user) {
+            res.status(200).json({ exists: true });
+        } else {
+            res.status(200).json({ exists: false });
+        }
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ error: 'Failed to check username.' });
+    } finally {
+        if (conn)
+            await db.disconnect();
+    }
+});
+
+
 module.exports = router;
