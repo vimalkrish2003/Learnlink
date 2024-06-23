@@ -1,6 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faUser, faLock, faEnvelope, faKey } from '@fortawesome/free-solid-svg-icons';
+import { useNavigate } from 'react-router-dom';
+import axios from 'axios';
+import { useAuth } from '../Contexts/AuthUserContext';
 import { faGoogle, faLinkedinIn } from '@fortawesome/free-brands-svg-icons';
 import "./login.css"
 import { Link } from "react-router-dom";
@@ -15,6 +18,9 @@ function LoginPage() {
   const [isOtpSent, setIsOtpSent] = useState(false);
   const [isOtpVerify, setIsOtpVerify] = useState(false);
   const [otpError, setOtpError] = useState("");
+  const {setIsAuthenticated} = useAuth();
+  const navigate = useNavigate();
+
 
   const handleSignUpClick = () => {
     setIsSignUpMode(true);
@@ -49,6 +55,23 @@ function LoginPage() {
     setIsOtpVerify(true);
   };
 
+
+  const handleSignIn = async () => {
+    try {
+      const response = await axios.post('/signin', {
+        email: values.email,
+        password: values.password,
+      });
+      setIsAuthenticated(true);
+      console.log('Sign in successful');
+      navigate('/in');
+      console.log("Navigated to /in")
+    } catch (error) {
+      console.error('Sign in failed', error.response.data);
+      navigate('/signup&in');
+    }
+  };
+
   const handleSubmit = (e) => {
     e.preventDefault();
     setIsSubmit(true);
@@ -57,7 +80,7 @@ function LoginPage() {
     if (Object.keys(errors).length === 0) {
       console.log("Submitting form...");
       if (!isSignUpMode) {
-        console.log("Form values:", values);
+        handleSignIn();
       } else {
         if (isOtpSent && isOtpVerify) {
           console.log("Sign Up values:", values);
@@ -182,7 +205,6 @@ function LoginPage() {
               Sign up
             </button>
           </div>
-          <img src="/img/dogLogin1.svg" className="image" alt="" />
         </div>
         <div className="panel right-panel">
           <div className="content">
@@ -194,7 +216,6 @@ function LoginPage() {
               Sign in
             </button>
           </div>
-          <img src="/img/dogLogin.svg" className="image" alt="" />
         </div>
       </div>
     </div>

@@ -101,38 +101,24 @@ router.post('/signup', checkNotAuthenticated, async (req, res) => {
             await db.disconnect();
     }
 });
-router.post('/signin', async function (req, res, next) {
+router.post('/signin', (req, res, next)=> {
     passport.authenticate('local', async function (err, user, info) {
         if (err) {
+            console.error("Signin error:", err);
             return next(err);
         }
         if (!user) {
-            return res.redirect('/signup&in');
+            res.status(401).send('User not found');
+            return; 
         }
-
-        // let conn;    REMOVE COMMENTS AFTER EMAIL VERIFICATION
-        // try {
-        //     conn=await pool.getConnection();
-        //     const result=await conn.query("SELECT email_verified FROM USERS WHERE email=?",[req.body.email]);
-        //     if(result[0].email_verified==false)
-        //     {
-        //         req.flash('error','Email not verified');
-        //         return res.redirect('')     //EMPLOY REDIRECT TO EMAIL VERIFICATION
-        //     }
-        // } catch (err) {
-        //     req.flash('error','Signin failed');
-        //     res.redirect('/signup&in');
-        // }
-        // finally
-        // {
-        //     if(conn)
-        //         conn.release();
-        // }
         req.logIn(user, function (err) {
             if (err) {
-                return next(err);
+                console.error("Login error:", err);
+                res.status(500).send('Sign in failed');
+                next(err);
             }
-            return res.redirect('/in');
+            res.status(200).send('Sign in successful');
+            return; 
         });
     })(req, res, next);
 });
