@@ -26,18 +26,15 @@ initialisePassport(passport, async (email) => {
 
 //MIDDLEWARES
 
-function checkAuthenticated(req,res,next)
-
-{
-    if (!req.isAuthenticated())
-    {
-        res.redirect('/signup&in');
+function checkAuthenticated(req, res, next) {
+    if (!req.isAuthenticated()) {
+        res.status(401).send('User is not authenticated');
+        return res.redirect('/signup&in');
     }
-    else
-    {
+    else {
         next();
     }
-    
+
 }
 
 //TO IMPLEMENT CHECK AUTHENTICATED FOR STUDENTS THAT ARE ALSO TEACHERS
@@ -45,7 +42,8 @@ function checkAuthenticated(req,res,next)
 function checkNotAuthenticated(req, res, next)    //Authentication check for routes that should not be accessed after login
 {
     if (req.isAuthenticated()) {
-        res.redirect('/in');
+        res.status(403).send('User is already authenticated');
+        return  res.redirect('/in');
     }
     else {
         next();
@@ -54,16 +52,24 @@ function checkNotAuthenticated(req, res, next)    //Authentication check for rou
 
 
 // GET FUNCTIONS
+router.get('/check-auth', (req, res) => {
+    if (req.isAuthenticated()) {
+        res.status(200).send("Authenticated");
+    } else {
+        res.status(401).send("Not Authenticated");
+    }
+});
 
-router.get('/',checkNotAuthenticated, (req, res) => {
+
+router.get('/', checkNotAuthenticated, (req, res) => {
     res.send("Intro page goes here");
 })
 
-router.get('/signup&in',checkNotAuthenticated, (req, res) => {
+router.get('/signup&in', checkNotAuthenticated, (req, res) => {
     res.send('signup & signin page goes here');
 })
 
-router.get('/forgotpassword',checkNotAuthenticated, (req, res) => {
+router.get('/forgotpassword', checkNotAuthenticated, (req, res) => {
     res.send("forgot password page goes here");
 })
 
@@ -74,7 +80,7 @@ router.post('/signup', checkNotAuthenticated, async (req, res) => {
     try {
         const hashedpassword = await bcrypt.hash(req.body.password, 10);
         conn = await db.connect();
-        const student = {email: req.body.email, password: hashedpassword };
+        const student = { email: req.body.email, password: hashedpassword };
         const collection = conn.collection('students');
         await collection.insertOne(student);
         req.flash('success', 'Sign Up successful, please Sign in to continue.');
@@ -95,8 +101,8 @@ router.post('/signup', checkNotAuthenticated, async (req, res) => {
             await db.disconnect();
     }
 });
-router.post('/signin',async function (req, res, next) {
-    passport.authenticate('local',async function (err, user, info) {
+router.post('/signin', async function (req, res, next) {
+    passport.authenticate('local', async function (err, user, info) {
         if (err) {
             return next(err);
         }
