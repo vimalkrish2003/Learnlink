@@ -1,6 +1,7 @@
 const crypto = require('crypto');
 const moment = require('moment');
-const pool = require('../database/connection');
+const db = require('../database/connection');
+const nodemailer = require('nodemailer');
 require('dotenv').config();
 function generateOTP() {
     return crypto.randomInt(100000, 999999).toString();
@@ -9,42 +10,53 @@ function generateOTP() {
 async function storeOTP(email, otp) {
     let conn;
     try {
-        conn = await pool.getConnection();
-        const expirationTime = moment().add(2, 'minutes').format('YYYY-MM-DD HH:mm:ss');
-        await conn.query("UPDATE USERS SET otp = ?, expiration_time = ? WHERE email = ?", [otp, expirationTime, email]);
+        conn = await db.connect();
+        const expirationTime = moment().add(2, 'minutes').toISOString(); // MongoDB typically uses ISODate format        
+        const collection = conn.collection('students');
+        const result = await collection.insertOne({ email: email, otp: otp, expirationTime: expirationTime });
+        if (result.insertedCount === 0) {
+            throw new Error("Failed to insert OTP for the email");
+        } else {
+            return true;
+        }
     } catch (err) {
         throw err;
-    } finally {
-        if (conn) conn.release();
     }
 }
 
-async function verifyOTP(email, receviedOTP) {
+async function verifyOTP(email, receivedOTP) {
     let conn;
     try {
-        conn = await pool.getConnection();
-        const result = await conn.query("SELECT otp, expiration_time FROM USERS WHERE email = ?", [email]);
-        if (result.length == 0)
+        conn = await db.connect();
+        const collection = conn.collection('students');
+        const user = await collection.findOne({ email: email });
+
+        if (!user)
             throw new Error("Email not Found");
-        if (moment().isAfter(moment(result[0].expiration_time))) {
+
+        if (moment().isAfter(moment(user.expirationTime))) {
             throw new Error("OTP has Expired");
         }
-        else if (receviedOTP !== result[0].otp) {
+
+        if (receivedOTP !== user.otp) {
             throw new Error("OTP is incorrect");
         }
-        await conn.query("UPDATE USERS SET otp=NULL,expiration_time=NULL,email_verified=true where email= ?", [email]);
-        return true;
 
-    }
-    catch (err) {
+        await collection.updateOne(
+            { email: email },
+            { 
+                $unset: { otp: "", expirationTime: "" },
+                $addToSet: { verifiedItems: "email" } 
+            }
+        );
+        return true;
+    } catch (err) {
         throw err;
-    }
-    finally {
-        if (conn)
-            conn.release();
-    }
+    } 
 }
-const nodemailer = require('nodemailer');
+
+
+
 
 async function sendOTPthroughEmail(email, otp) {
     let transporter = nodemailer.createTransport({
@@ -72,7 +84,7 @@ async function sendOTPthroughEmail(email, otp) {
         
         Sincerely,
         
-        The Learn Link Team`
+        The Learnlink Team`
     };
 
     try {
@@ -83,23 +95,8 @@ async function sendOTPthroughEmail(email, otp) {
     }
 }
 
-async function cleanupUnverifiedUsers() {
-    let conn;
-    try {
-        conn = await pool.getConnection();
-        const currentTime = moment().format('YYYY-MM-DD HH:mm:ss');
-        conn.query("DELETE FROM USERS WHERE email_verified = false AND (expiration_time < ? OR expiration_time IS NULL)", [currentTime]);
-    } catch (err) {
-        throw err;
-    }
-    finally {
-        if (conn)
-            conn.release();
-    }
-}
-//Run the cleanup function every 24 hours
 
-//setInterval(cleanupUnverifiedUsers, 24 * 60 * 60 * 1000);   Remove Comment while running
+
 
 module.exports = {
     generateOTP,
