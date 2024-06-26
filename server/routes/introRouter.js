@@ -4,7 +4,7 @@ const bcrypt = require('bcrypt');
 const passport = require('passport');
 const initialisePassport = require('../utils/passportConfig');
 const db = require('../database/connection');
-
+const { generateOTP, storeOTP, verifyOTP, sendOTPthroughEmail } = require('../utils/oneTimePasswordManagement');
 //initialising passport, 2nd param is a function to get user by email
 initialisePassport(passport, async (email) => {
     let conn;
@@ -17,10 +17,6 @@ initialisePassport(passport, async (email) => {
     }
     catch (err) {
         throw err;
-    }
-    finally {
-        if (conn)
-            db.disconnect();
     }
 });
 
@@ -43,7 +39,7 @@ function checkNotAuthenticated(req, res, next)    //Authentication check for rou
 {
     if (req.isAuthenticated()) {
         res.status(403).send('User is already authenticated');
-        return  res.redirect('/in');
+        return res.redirect('/in');
     }
     else {
         next();
@@ -78,30 +74,26 @@ router.get('/forgotpassword', checkNotAuthenticated, (req, res) => {
 router.post('/signup', checkNotAuthenticated, async (req, res) => {
     let conn;
     try {
-        const hashedpassword = await bcrypt.hash(req.body.password, 10);
+        const hashedPassword = await bcrypt.hash(req.body.password, 10);
         conn = await db.connect();
-        const student = { email: req.body.email, password: hashedpassword };
         const collection = conn.collection('students');
-        await collection.insertOne(student);
-        req.flash('success', 'Sign Up successful, please Sign in to continue.');
-        res.redirect('/signup&in'); // Redirect to signin page
-    }
-    catch (err) {
-        if (err.code === 11000) { // MongoDB duplicate key error code
-            req.flash('error', 'Email already exists');
-            res.redirect('/signup&in'); // Redirect to signup page
+        // Check if a student with the given email already exists
+        const existingStudent = await collection.findOne({ email: req.body.email });
+        if (existingStudent && existingStudent.verifiedItems && existingStudent.verifiedItems.includes('email')) {
+            // If the student exists and email is verified, update their password
+            await collection.updateOne({ email: req.body.email }, { $set: { password: hashedPassword } });
+            res.status(200).send('Signed Up successfully, please Sign in to continue.');
         } else {
-            console.error(err);
-            req.flash('error', 'Signup failed');
-            res.redirect('/signup&in'); // Redirect to signup page
+            // If the student does not exist or email is not verified, return an error
+            res.status(400).send('Please complete the OTP verification process before signing up.');
         }
-    }
-    finally {
-        if (conn)
-            await db.disconnect();
+    } catch (err) {
+        console.error(err);
+        req.flash('error', 'An error occurred, please try again.');
     }
 });
-router.post('/signin', (req, res, next)=> {
+
+router.post('/signin', (req, res, next) => {
     passport.authenticate('local', async function (err, user, info) {
         if (err) {
             console.error("Signin error:", err);
@@ -109,7 +101,7 @@ router.post('/signin', (req, res, next)=> {
         }
         if (!user) {
             res.status(401).send('User not found');
-            return; 
+            return;
         }
         req.logIn(user, function (err) {
             if (err) {
@@ -118,7 +110,7 @@ router.post('/signin', (req, res, next)=> {
                 next(err);
             }
             res.status(200).send('Sign in successful');
-            return; 
+            return;
         });
     })(req, res, next);
 });
@@ -133,6 +125,49 @@ router.delete('/signout', (req, res) => {
     }
 })
 
+// router.post('/generate-signup-otp', checkNotAuthenticated, async (req, res) => {
+//     const { email } = req.body; // Assuming the client sends the email in the request body
+//     let conn;
+//     try {
+//         conn = await db.connect();
+//         const collection = conn.collection('students');
+//         // Check for duplicate email
+//         const existingUser = await collection.findOne({ email: email });
+//         if (existingUser) {
+//             if (existingUser.verifiedItems && existingUser.verifiedItems.includes('email') && existingUser.password) {
+//                 return res.status(400).send('Signup failed: Another account has already verified with this email.');
+//             }
+//             else 
+//             {
+//                 // Delete the existing user
+//                 await collection.deleteOne({ email: email })
+//             }
+
+//         }
+//         // Generate OTP
+//         const otp = generateOTP();
+//         // Store OTP
+//         await storeOTP(email, otp);
+//         // Send OTP through Email
+//         await sendOTPthroughEmail(email, otp);
+//         res.send('OTP has been sent to your email.');
+//     } catch (err) {
+//         console.error(err);
+//         res.status(500).send(`An error occurred while generating OTP.\n${err.message}`);
+//     }
+// });
+
+// router.post('/verify-signup-otp', checkNotAuthenticated, async (req, res) => {
+//     const { email, otp } = req.body; // Assuming the client sends the email and OTP in the request body
+//     try {
+//         // Verify OTP
+//         await verifyOTP(email, otp);
+//         res.status(200).send('OTP has been verified successfully.');
+//     } catch (err) {
+//         console.error(err);
+//         res.status(400).send(err.message);
+//     }
+// });
 
 module.exports = {
     router: router,

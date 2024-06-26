@@ -35,24 +35,41 @@ function LoginPage() {
     setValues({ ...values, [name]: value });
   };
 
-  const handleOtpSend = () => {
+  const handleOtpSend = async () => {
     if (!values.email) {
       setOtpError("Email is required to send OTP");
       return;
     }
-    // Simulate OTP sending
-    console.log("Sending OTP to", values.email);
-    setIsOtpSent(true);
-    setOtpError("");
+    try {
+      const response = await axios.post('/generate-signup-otp', {
+        email: values.email,
+      });
+      console.log("OTP sent to", values.email);
+      setIsOtpSent(true);
+      setOtpError("");
+    } catch (error) {
+      console.error("Error sending OTP:", error.response ? error.response.data : error.message);
+      setOtpError(error.response ? error.response.data : "Failed to send OTP");
+    }
   };
 
-  const handleOtpSubmit = () => {
+  const handleOtpSubmit = async () => {
     if (values.otp.length !== 6 || isNaN(values.otp)) {
       setOtpError("Invalid OTP. Please enter a 6-digit numeric OTP.");
       return;
     }
-    setOtpError("");
-    setIsOtpVerify(true);
+    try {
+      const response = await axios.post('/verify-signup-otp', {
+        email: values.email,
+        otp: values.otp,
+      });
+      console.log(response.data); // Log otp success verification message
+      setIsOtpVerify(true);
+      setOtpError("");
+    } catch (error) {
+      console.error("Error verifying OTP:", error.response ? error.response.data : error.message);
+      setOtpError(error.response ? error.response.data : "Failed to verify OTP");
+    }
   };
 
 
@@ -72,6 +89,20 @@ function LoginPage() {
     }
   };
 
+  const handleSignUp = async () => {
+    try {
+      const response = await axios.post('/signup', {
+        email: values.email,
+        password: values.password,
+      });
+      console.log(response.data); // Print the success message
+      setIsSignUpMode(false);
+    } catch (error) {
+      console.error('Sign up failed', error.response ? error.response.data : error.message);
+      navigate('/signup&in'); // Redirect back to the signup page on failure
+    }
+  };
+
   const handleSubmit = (e) => {
     e.preventDefault();
     setIsSubmit(true);
@@ -80,10 +111,10 @@ function LoginPage() {
     if (Object.keys(errors).length === 0) {
       console.log("Submitting form...");
       if (!isSignUpMode) {
-        handleSignIn();
+         handleSignIn();
       } else {
         if (isOtpSent && isOtpVerify) {
-          console.log("Sign Up values:", values);
+          handleSignUp();
         }
       }
     }

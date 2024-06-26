@@ -5,6 +5,7 @@ var cookieParser = require('cookie-parser');
 var logger = require('morgan');
 const flash = require('express-flash');
 const session = require('express-session');
+const { connect, disconnect } = require('./database/connection');
 //Router Require
 var intro = require('./routes/introRouter');
 var homePageRouter = require('./routes/homePageRouter');
@@ -53,8 +54,19 @@ app.use(function (err, req, res, next) {
   res.render('error');
 });
 
-app.listen(port, () => {
+app.listen(port, async() => {
+  await connect();
   console.log(`Server is running on http://localhost:${port}`);
+});
+
+process.on('SIGINT', async () => {
+  await disconnect();
+  process.exit(0);
+});
+
+process.on('SIGTERM', async () => {
+  await disconnect();
+  process.exit(0);
 });
 
 module.exports = app;

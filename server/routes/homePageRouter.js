@@ -44,10 +44,7 @@ router.post('/add-student',checkAuthenticated,  [
     } catch (err) {
         console.error(err);
         res.status(500).json({ error: 'Failed to add student details.' });
-    } finally {
-        if (conn)
-            await db.disconnect();
-    }
+    } 
 });
 
 
@@ -67,10 +64,7 @@ router.post('/check-username', checkAuthenticated, async (req, res) => {
     } catch (err) {
         console.error(err);
         res.status(500).json({ error: 'Failed to check username.' });
-    } finally {
-        if (conn)
-            await db.disconnect();
-    }
+    } 
 });
 
 
