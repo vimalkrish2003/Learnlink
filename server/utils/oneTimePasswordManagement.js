@@ -44,15 +44,15 @@ async function verifyOTP(email, receivedOTP) {
 
         await collection.updateOne(
             { email: email },
-            { 
+            {
                 $unset: { otp: "", expirationTime: "" },
-                $addToSet: { verifiedItems: "email" } 
+                $addToSet: { verifiedItems: "email" }
             }
         );
         return true;
     } catch (err) {
         throw err;
-    } 
+    }
 }
 
 
@@ -62,35 +62,39 @@ async function sendOTPthroughEmail(email, otp) {
     let transporter = nodemailer.createTransport({
         service: 'gmail',
         auth: {
+            type: 'OAuth2',
             user: process.env.EMAIL_USER,
-            pass: process.env.EMAIL_PASS
+            clientId: process.env.OAUTH_CLIENTID,
+            clientSecret: process.env.OAUTH_CLIENT_SECRET,
+            refreshToken: process.env.OAUTH_REFRESH_TOKEN,
         }
     });
 
     let mailOptions = {
         from: process.env.EMAIL_FROM,
         to: email,
-        subject: 'Your OTP for verification for Learn Link ',
+        subject: 'Your OTP for verification for Learn Link',
         text: `Hi there,
 
-        Thank you for using Learn Link! To ensure your safety, please enter the following One-Time Password (OTP) in the designated field on our website:
-        
-        ${otp}
-        
-        This OTP is valid for 2 minutes. Please do not share it with anyone else.
-        
-        If you did not initiate this request, please disregard this email.
-        Welcome to Learn Link!
-        
-        Sincerely,
-        
-        The Learnlink Team`
+Thank you for using Learn Link! To ensure your safety, please enter the following One-Time Password (OTP) in the designated field on our website:
+
+${otp}
+
+This OTP is valid for 2 minutes. Please do not share it with anyone else.
+
+If you did not initiate this request, please disregard this email.
+Welcome to Learn Link!
+
+Sincerely,
+
+The Learnlink Team`
     };
 
     try {
         await transporter.sendMail(mailOptions);
+        console.log('Email sent successfully');
     } catch (error) {
-        console.log(error);
+        console.log('Failed to send email', error);
         throw error;
     }
 }
