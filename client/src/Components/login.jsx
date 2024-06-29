@@ -103,6 +103,23 @@ function LoginPage() {
     }
   };
 
+
+  const handleSignIn = async () => {
+    try {
+      const response = await axios.post('/signin', {
+        email: values.email,
+        password: values.password,
+      });
+      setIsAuthenticated(true);
+      console.log('Sign in successful');
+      navigate('/in');
+      console.log("Navigated to /in")
+    } catch (error) {
+      console.error('Sign in failed', error.response.data);
+      navigate('/signup&in');
+    }
+  };
+
   const handleSubmit = (e) => {
     e.preventDefault();
     setIsSubmit(true);
@@ -111,7 +128,7 @@ function LoginPage() {
     if (Object.keys(errors).length === 0) {
       console.log("Submitting form...");
       if (!isSignUpMode) {
-         handleSignIn();
+      handleSignIn();
       } else {
         if (isOtpSent && isOtpVerify) {
           handleSignUp();
@@ -167,7 +184,7 @@ function LoginPage() {
             </div>
             <p className='errormsg'>{formErrors.password}</p>
             <button className='btn' onClick={handleSubmit} type='submit'>Sign In</button>
-
+            <p ><Link to="/forget" className='para'>forgot password ?</Link></p>
             <p className="social-text loginp">Sign in with social platforms</p>
             <div className="social-media">
               <a href="#" className="social-icon">
@@ -212,7 +229,7 @@ function LoginPage() {
               </>
             )}
             <button className='btn' onClick={handleSubmit}>Sign Up</button>
-
+            
             <p className="social-text loginp">Or Sign up with social platforms</p>
             <div className="social-media">
               <a href="#" className="social-icon">

@@ -4,6 +4,7 @@ import { AuthProvider } from './Contexts/AuthUserContext';
 import ProtectedRoute from './Components/RoutingProtection/ProtectedRoute';
 import UnProtectedRoute from './Components/RoutingProtection/UnProtectedRoute';
 import LoginPage from './Components/login';
+import ForgotPage from './Components/forget';
 
 function App() {
   const router=createBrowserRouter(
@@ -32,8 +33,17 @@ function App() {
             <h1>This is homepage</h1>
           </ProtectedRoute>
         )
+      },
+      {
+        path:'/forget',
+        element:(
+          <UnProtectedRoute>
+            <ForgotPage/>
+          </UnProtectedRoute>
+        )
       }
     ]
+    
   )
   return (
     <AuthProvider>
