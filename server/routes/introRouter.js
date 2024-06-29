@@ -4,7 +4,7 @@ const bcrypt = require('bcrypt');
 const passport = require('passport');
 const initialisePassport = require('../utils/passportConfig');
 const db = require('../database/connection');
-const { generateOTP, storeOTP, verifyOTP, sendOTPthroughEmail } = require('../utils/oneTimePasswordManagement');
+const { generateOTP, storeOTP, verifyOTP, sendOTPthroughEmail,verifyForgotPassOTP,updateOTPForExistingUser } = require('../utils/oneTimePasswordManagement');
 //initialising passport, 2nd param is a function to get user by email
 initialisePassport(passport, async (email) => {
     let conn;
@@ -137,8 +137,7 @@ router.post('/generate-signup-otp', checkNotAuthenticated, async (req, res) => {
             if (existingUser.verifiedItems && existingUser.verifiedItems.includes('email') && existingUser.password) {
                 return res.status(400).send('Signup failed: Another account has already verified with this email.');
             }
-            else 
-            {
+            else {
                 // Delete the existing user
                 await collection.deleteOne({ email: email })
             }
@@ -166,6 +165,86 @@ router.post('/verify-signup-otp', checkNotAuthenticated, async (req, res) => {
     } catch (err) {
         console.error(err);
         res.status(400).send(err.message);
+    }
+});
+
+router.post('/get-otp', checkNotAuthenticated, async (req, res) => {
+    const { email } = req.body;
+    let conn;
+    try {
+        conn = await db.connect();
+        const collection = conn.collection('students');
+        const user = await collection.findOne({ email: email });
+        if (!user) {
+            return res.status(404).send('Email not found');
+        }
+        const otp = generateOTP();
+        await updateOTPForExistingUser(email, otp);
+        await sendOTPthroughEmail(email, otp);
+        res.send('An OTP has been sent to your email');
+    }
+    catch (err) {
+        console.error(err);
+        res.status(500).send(`An error occurred while generating OTP.\n${err.message}`);
+    }
+});
+router.post('/verify-otp', checkNotAuthenticated, async (req, res) => {
+    const { email, otp } = req.body;
+    try {
+        const forgotPassToken = await verifyForgotPassOTP(email, otp);
+        if (forgotPassToken) {
+            req.session.forgotPassToken = forgotPassToken;
+            await req.session.save();
+            res.status(200).send('OTP verified successfully!');
+        
+        }
+        else
+        {
+            res.status(400).send('Failed to verify OTP. Please try again.');
+        }
+    }
+    catch (err) {
+        console.error(err);
+        res.status(400).send(err.message);
+    }
+});
+
+
+router.post('/reset-password', checkNotAuthenticated, async (req, res) => {
+    const { email, password } = req.body;
+    const forgotPassToken = req.session.forgotPassToken;
+    if (!forgotPassToken) {
+        return res.status(400).send('You are not authorized to reset the password. Please try again.');
+    }
+    let conn;
+    try {
+
+        conn = await db.connect();
+        const collection = conn.collection('students');
+        const user = await collection.findOne({ email: email, forgotPassToken: forgotPassToken });
+        if (!user) {
+            return res.status(404).send('Invalid session . Please try again.');
+        }
+        else if (user.forgotPassTokenExpirationTime < new Date().toISOString()) {
+            return res.status(400).send('Your session has expired. Please try again.');
+        }
+        req.session.forgotPassToken = null;
+        const hashedPassword = await bcrypt.hash(password, 10);
+        const result = await collection.updateOne(
+            { email: email, forgotPassToken: forgotPassToken },
+            {
+                $set: { password: hashedPassword },
+                $unset: { forgotPassToken: "", forgotPassTokenExpirationTime: "" }
+            }
+        );
+        if (result.modifiedCount > 0) {
+            res.status(200).send('Password reset successful!');
+        } else {
+            res.status(400).send('Failed to reset password. Please try again.');
+        }
+    } catch (err) {
+        console.error(err);
+        res.status(500).send(`An error occurred while resetting the password${err.message}`);
     }
 });
 

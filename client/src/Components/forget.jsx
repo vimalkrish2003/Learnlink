@@ -1,5 +1,7 @@
 import React, { useState } from 'react';
 import styled, { keyframes, css } from 'styled-components';
+import axios from 'axios';
+import { useNavigate } from 'react-router-dom';
 
 // Keyframes for Animations
 const fadeIn = keyframes`
@@ -99,6 +101,7 @@ const ForgotPassword = () => {
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [errors, setErrors] = useState({});
+  const navigate = useNavigate();
 
   const validate = () => {
     let valid = true;
@@ -137,19 +140,48 @@ const ForgotPassword = () => {
     return valid;
   };
 
-  const handleAction = () => {
+  const handleAction = async () => {
     if (validate()) {
-      if (step === 3) {
-        console.log({
-          email,
-          otp,
-          password,
-          confirmPassword
-        });
-        alert('Password reset successful!');
-      } else {
-        setStep(step + 1);
+      switch (step) {
+        case 1:
+          try {
+            await axios.post('/get-otp', { email });
+            setErrors({});
+            console.log(`An OTP has been sent to ${email}`);
+            setStep(step + 1);
+          } catch (error) {
+            console.error('Failed to send OTP:', error.response?.data || error.message);
+            setErrors({ email: error.response?.data || 'Failed to send OTP. Please try again.' });
+          }
+          break;
+        case 2:
+          try {
+            await axios.post('/verify-otp', { email, otp });
+            setErrors({});
+            console.log('OTP verified successfully!');
+            setStep(step + 1);
+          } catch (error) {
+            console.error('Failed to verify OTP:', error.response?.data || error.message);
+            setErrors({ otp: error.response?.data || 'Failed to verify OTP. Please try again.' });
+          }
+          break;
+        case 3:
+          try {
+            await axios.post('/reset-password', { email, password });
+            setErrors({});
+            alert('Password reset successful!');
+            navigate('/signup&in');
+          }
+          catch (error) {
+            console.error('Failed to reset password:', error);
+            setErrors({ confirmPassword: error.response?.data || "Failed to reset password. Please try again " });
+          }
+          break;
+        default:
+          console.log('Invalid step');
+          break;
       }
+
     }
   };
 

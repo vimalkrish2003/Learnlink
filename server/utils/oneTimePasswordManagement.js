@@ -7,6 +7,10 @@ function generateOTP() {
     return crypto.randomInt(100000, 999999).toString();
 }
 
+function generateSecureToken() {
+    return crypto.randomBytes(20).toString('hex');
+}
+
 async function storeOTP(email, otp) {
     let conn;
     try {
@@ -24,6 +28,7 @@ async function storeOTP(email, otp) {
     }
 }
 
+//Verify otp for signup process
 async function verifyOTP(email, receivedOTP) {
     let conn;
     try {
@@ -56,6 +61,65 @@ async function verifyOTP(email, receivedOTP) {
 }
 
 
+//Verify otp for forgot password process
+async function verifyForgotPassOTP(email, receivedOTP) {
+    let conn;
+    try {
+        conn = await db.connect();
+        const collection = conn.collection('students');
+        const user = await collection.findOne({ email: email });
+
+        if (!user)
+            throw new Error("Email not Found");
+
+        if (moment().isAfter(moment(user.expirationTime))) {
+            throw new Error("OTP has Expired");
+        }
+
+        if (receivedOTP !== user.otp) {
+            throw new Error("OTP is incorrect");
+        }
+
+        const forgotPassToken = generateSecureToken();
+        const forgotPassTokenExpirationTime = moment().add(5, 'minutes').toISOString();
+        await collection.updateOne(
+            { email: email },
+            {
+                $unset: { otp: "", expirationTime: "" },
+                $set: { forgotPassToken: forgotPassToken, forgotPassTokenExpirationTime: forgotPassTokenExpirationTime }
+            },
+            { upsert: false}
+        );
+        return forgotPassToken;
+    } catch (err) {
+        throw err;
+    }
+}
+
+async function updateOTPForExistingUser(email, otp) {
+    let conn;
+    try {
+        conn = await db.connect();
+        const expirationTime = moment().add(2, 'minutes').toISOString(); // MongoDB typically uses ISODate format
+        const collection = conn.collection('students');
+        const result = await collection.updateOne(
+            { email: email },
+            {
+                $set: { otp: otp, expirationTime: expirationTime }
+            },
+            { upsert: false } // Ensures that a new document is not created if the specified email does not exist
+        );
+        if (result.matchedCount === 0) {
+            throw new Error("No user found with the given email");
+        } else if (result.modifiedCount === 0) {
+            throw new Error("Failed to update OTP for the email");
+        } else {
+            return true;
+        }
+    } catch (err) {
+        throw err;
+    }
+}
 
 
 async function sendOTPthroughEmail(email, otp) {
@@ -73,7 +137,7 @@ async function sendOTPthroughEmail(email, otp) {
     let mailOptions = {
         from: process.env.EMAIL_FROM,
         to: email,
-        subject: 'Your OTP for verification for Learn Link',
+        subject: `Your OTP for verification for Learn Link is ${otp}`,
         text: `Hi there,
 
 Thank you for using Learn Link! To ensure your safety, please enter the following One-Time Password (OTP) in the designated field on our website:
@@ -106,5 +170,7 @@ module.exports = {
     generateOTP,
     storeOTP,
     verifyOTP,
-    sendOTPthroughEmail
+    verifyForgotPassOTP,
+    sendOTPthroughEmail,
+    updateOTPForExistingUser
 };
