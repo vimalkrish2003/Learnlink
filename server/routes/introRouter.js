@@ -125,49 +125,49 @@ router.delete('/signout', (req, res) => {
     }
 })
 
-// router.post('/generate-signup-otp', checkNotAuthenticated, async (req, res) => {
-//     const { email } = req.body; // Assuming the client sends the email in the request body
-//     let conn;
-//     try {
-//         conn = await db.connect();
-//         const collection = conn.collection('students');
-//         // Check for duplicate email
-//         const existingUser = await collection.findOne({ email: email });
-//         if (existingUser) {
-//             if (existingUser.verifiedItems && existingUser.verifiedItems.includes('email') && existingUser.password) {
-//                 return res.status(400).send('Signup failed: Another account has already verified with this email.');
-//             }
-//             else 
-//             {
-//                 // Delete the existing user
-//                 await collection.deleteOne({ email: email })
-//             }
+router.post('/generate-signup-otp', checkNotAuthenticated, async (req, res) => {
+    const { email } = req.body; // Assuming the client sends the email in the request body
+    let conn;
+    try {
+        conn = await db.connect();
+        const collection = conn.collection('students');
+        // Check for duplicate email
+        const existingUser = await collection.findOne({ email: email });
+        if (existingUser) {
+            if (existingUser.verifiedItems && existingUser.verifiedItems.includes('email') && existingUser.password) {
+                return res.status(400).send('Signup failed: Another account has already verified with this email.');
+            }
+            else 
+            {
+                // Delete the existing user
+                await collection.deleteOne({ email: email })
+            }
 
-//         }
-//         // Generate OTP
-//         const otp = generateOTP();
-//         // Store OTP
-//         await storeOTP(email, otp);
-//         // Send OTP through Email
-//         await sendOTPthroughEmail(email, otp);
-//         res.send('OTP has been sent to your email.');
-//     } catch (err) {
-//         console.error(err);
-//         res.status(500).send(`An error occurred while generating OTP.\n${err.message}`);
-//     }
-// });
+        }
+        // Generate OTP
+        const otp = generateOTP();
+        // Store OTP
+        await storeOTP(email, otp);
+        // Send OTP through Email
+        await sendOTPthroughEmail(email, otp);
+        res.send('OTP has been sent to your email.');
+    } catch (err) {
+        console.error(err);
+        res.status(500).send(`An error occurred while generating OTP.\n${err.message}`);
+    }
+});
 
-// router.post('/verify-signup-otp', checkNotAuthenticated, async (req, res) => {
-//     const { email, otp } = req.body; // Assuming the client sends the email and OTP in the request body
-//     try {
-//         // Verify OTP
-//         await verifyOTP(email, otp);
-//         res.status(200).send('OTP has been verified successfully.');
-//     } catch (err) {
-//         console.error(err);
-//         res.status(400).send(err.message);
-//     }
-// });
+router.post('/verify-signup-otp', checkNotAuthenticated, async (req, res) => {
+    const { email, otp } = req.body; // Assuming the client sends the email and OTP in the request body
+    try {
+        // Verify OTP
+        await verifyOTP(email, otp);
+        res.status(200).send('OTP has been verified successfully.');
+    } catch (err) {
+        console.error(err);
+        res.status(400).send(err.message);
+    }
+});
 
 module.exports = {
     router: router,
