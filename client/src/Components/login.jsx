@@ -104,21 +104,6 @@ function LoginPage() {
   };
 
 
-  const handleSignIn = async () => {
-    try {
-      const response = await axios.post('/signin', {
-        email: values.email,
-        password: values.password,
-      });
-      setIsAuthenticated(true);
-      console.log('Sign in successful');
-      navigate('/in');
-      console.log("Navigated to /in")
-    } catch (error) {
-      console.error('Sign in failed', error.response.data);
-      navigate('/signup&in');
-    }
-  };
 
   const handleSubmit = (e) => {
     e.preventDefault();
