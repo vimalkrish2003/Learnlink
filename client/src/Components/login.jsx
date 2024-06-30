@@ -7,6 +7,9 @@ import { useAuth } from '../Contexts/AuthUserContext';
 import { faGoogle, faLinkedinIn } from '@fortawesome/free-brands-svg-icons';
 import "./login.css"
 import { Link } from "react-router-dom";
+import { ToastContainer, toast } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
+
 
 
 function LoginPage() {
@@ -47,9 +50,11 @@ function LoginPage() {
       console.log("OTP sent to", values.email);
       setIsOtpSent(true);
       setOtpError("");
+      toast.success("OTP has been sent to your email!")
     } catch (error) {
       console.error("Error sending OTP:", error.response ? error.response.data : error.message);
       setOtpError(error.response ? error.response.data : "Failed to send OTP");
+      toast.error("Failed to send OTP.Please try again.")
     }
   };
 
@@ -129,43 +134,60 @@ function LoginPage() {
   }, [formErrors, isSubmit]);
 
   const validate = (val) => {
-    const errors = {}
+    const errors = {};
     const regex = /^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,4}$/i;
     const password_pattern = /^(?=.*[0-9])(?=.*[a-z])(?=.*[A-Z])(?=.*\W)(?!.* ).{8,16}$/;
-    if (isSubmit) {
-      if (!val.email) {
-        errors.email = "Email is required";
-      } else if (!regex.test(val.email)) {
-        errors.email = "Not a valid email format";
-      }
-      if (!val.password) {
-        errors.password = "Password is required";
-      } else if (!password_pattern.test(val.password)) {
-        errors.password = "Password: 8-16 chars, 1 digit, 1 lowercase, 1 uppercase, 1 special, no spaces";
-      }
-      if (isSignUpMode) {
-        if (!val.confirm_password || val.confirm_password !== val.password) {
-          errors.confirm_password = "Passwords do not match";
-        }
+  
+    // Email validations
+    if (!val.email) {
+      errors.email = "Email is required";
+    } else if (!regex.test(val.email)) {
+      errors.email = "Not a valid email format";
+    }
+  
+    // Password validations
+    if (!val.password) {
+      errors.password = "Password is required";
+    } else if (!password_pattern.test(val.password)) {
+      errors.password = "Password: 8-16 chars, 1 digit, 1 lowercase, 1 uppercase, 1 special, no spaces";
+    }
+  
+    // Confirm password validations specific to Signup mode
+    if (isSignUpMode) {
+      if (!val.confirm_password || val.confirm_password !== val.password) {
+        errors.confirm_password = "Passwords do not match";
       }
     }
+  
     return errors;
-  }
-
+  };
+  
   return (
     <div className={`loginContainer ${isSignUpMode ? 'sign-up-mode' : ''}`}>
+       <ToastContainer
+      position="top-center" // Position the toast at the top center
+      autoClose={5000} // Automatically close after 5 seconds
+      hideProgressBar={false} // Show a progress bar
+      newestOnTop={true} // Show newest toast on top
+      closeOnClick // Close the toast when clicked
+      rtl={false} // Left-to-right layout
+      pauseOnFocusLoss // Pause the timer when the window is not in focus
+      draggable // Allow drag and drop to dismiss
+      pauseOnHover // Pause the timer when hovering over the toast
+      theme="colored" // Use the 'colored' theme for better visual integration with most websites
+    />
       <div className="forms-container">
         <div className="signin-signup">
-          <form action="#" className="sign-in-form loginForm" onSubmit={handleSubmit}>
+          <form action="#" className="sign-in-form loginForm" onSubmit={handleSubmit} autoComplete="off" > 
             <h2 className="title">Sign in</h2>
             <div className="input-field">
               <FontAwesomeIcon icon={faEnvelope} className='my-auto mx-auto' />
-              <input name='email' className='LoginInput' type="email" placeholder="Email" value={values.email} onChange={handleChange} />
+              <input name='email' className='LoginInput' type="email" placeholder="Email" value={values.email} onChange={handleChange} autoComplete="off"/>
             </div>
             <p className='errormsg'>{formErrors.email}</p>
             <div className="input-field">
               <FontAwesomeIcon icon={faLock} className='my-auto mx-auto' />
-              <input name='password' className='LoginInput' type="password" placeholder="Password" value={values.password} onChange={handleChange} />
+              <input name='password' className='LoginInput' type="password" placeholder="Password" value={values.password} onChange={handleChange} autoComplete="off"/>
             </div>
             <p className='errormsg'>{formErrors.password}</p>
             <button className='btn' onClick={handleSubmit} type='submit'>Sign In</button>
@@ -181,11 +203,11 @@ function LoginPage() {
             </div>
           </form>
 
-          <form action="#" className="sign-up-form loginForm" onSubmit={handleSubmit}>
+          <form action="#" className="sign-up-form loginForm" onSubmit={handleSubmit} autoComplete="off">
             <h2 className="title">Sign up</h2>
             <div className="input-field">
               <FontAwesomeIcon icon={faEnvelope} className='my-auto mx-auto' />
-              <input name='email' className='LoginInput' type="email" placeholder="Email" value={values.email} onChange={handleChange} />
+              <input name='email' className='LoginInput' type="email" placeholder="Email" value={values.email} onChange={handleChange} autoComplete="off" />
               <button type="button" className="otp-btn" onClick={handleOtpSend}>Verify</button>
             </div>
             <p className='errormsg'>{formErrors.email}</p>
@@ -194,7 +216,7 @@ function LoginPage() {
             {isOtpSent && (
               <div className="input-field">
                 <FontAwesomeIcon icon={faKey} className='my-auto mx-auto' />
-                <input name='otp' className='LoginInput' type="text" placeholder="Enter OTP" value={values.otp} onChange={handleChange} />
+                <input name='otp' className='LoginInput' type="text" placeholder="Enter OTP" value={values.otp} onChange={handleChange} autoComplete="off"/>
                 <button type="button" className="otp-btn" onClick={handleOtpSubmit}>Submit</button>
               </div>
             )}
@@ -203,12 +225,12 @@ function LoginPage() {
               <>
                 <div className="input-field">
                   <FontAwesomeIcon icon={faLock} className='my-auto mx-auto' />
-                  <input name='password' className='LoginInput' type="password" placeholder="Password" value={values.password} onChange={handleChange} />
+                  <input name='password' className='LoginInput' type="password" placeholder="Password" value={values.password} onChange={handleChange} autoComplete="off" />
                 </div>
                 <p className='errormsg'>{formErrors.password}</p>
                 <div className="input-field">
                   <FontAwesomeIcon icon={faLock} className='my-auto mx-auto' />
-                  <input name='confirm_password' className='LoginInput' type='password' placeholder="Enter Confirm Password" value={values.confirm_password} onChange={handleChange} />
+                  <input name='confirm_password' className='LoginInput' type='password' placeholder="Enter Confirm Password" value={values.confirm_password} onChange={handleChange} autoComplete="off"/>
                 </div>
                 <p className='errormsg'>{formErrors.confirm_password}</p>
               </>

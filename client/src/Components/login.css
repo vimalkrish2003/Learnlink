@@ -495,28 +495,17 @@ margin-bottom: 10px;
 display: block;
 }
 
-/* Add any common styles here */
-.my-auto {
-  margin: auto;
-}
-.mx-auto {
-  margin-left: auto;
-  margin-right: auto;
+/* custom-toastify.css */
+
+.Toastify__toast--success {
+  background-color: #eb984a; /* Example success color */
 }
 
-/* Add specific styles for the ForgotPasswordPage */
-.forgotPasswordContainer {
-  background-color: #f9f9f9;
+.Toastify__toast--error {
+  background-color: #0f0302; /* Example error color */
 }
-.animatedCircle {
-  animation: bounce 5s infinite ease-in-out;
-}
-@keyframes bounce {
-  0%, 100% {
-    transform: translateY(0);
-  }
-  50% {
-    transform: translateY(-20px);
-  }
+
+.Toastify__toast-body {
+  font-family: 'Roboto', sans-serif; /* Example font family */
 }
 
